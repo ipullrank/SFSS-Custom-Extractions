@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "version": 1,
+      "javascript": "return seoSpider.data(document.body.innerText);\\n",
+      "name": "Extract Text Content",
+      "comments": "",
+      "type": "EXTRACTION",
+      "actionTimeoutSecs": 1,
+      "contentTypes": "text/html"
+    },
+    {
+      "version": 1,
+      "javascript": "\\/\\/ Open AI embeddings from page content\\n\\/\\/\\n\\/\\/ IMPORTANT:\\n\\/\\/ You will need to supply your API key below on line 11 which will be stored\\n\\/\\/ as part of your SEO Spider configuration in plain text. Also be mindful if \\n\\/\\/ sharing this script that you will be sharing your API key also unless you \\n\\/\\/ delete it before sharing.\\n\\/\\/ \\n\\/\\/\\n\\nconst OPENAI_API_KEY \u003d \\\u0027YOUR OPENAI KEY HERE\\\u0027;\\nconst userContent \u003d document.body.innerText;\\n    \\nfunction chatGptRequest() {\\n    return fetch(\\\u0027https:\\/\\/api.openai.com\\/v1\\/embeddings\\\u0027, {\\n        method: \\\u0027POST\\\u0027,\\n        headers: {\\n            \\\u0027Authorization\\\u0027: `Bearer ${OPENAI_API_KEY}`,\\n            \\\"Content-Type\\\": \\\"application\\/json\\\",\\n        },\\n        body: JSON.stringify({\\n            model: \\\"text-embedding-3-small\\\",\\n            input: `${userContent}`,\\n            encoding_format: \\\"float\\\",\\n            })\\n    })\\n    .then(response \u003d\u003e {\\n        if (!response.ok) {\\n             return response.text().then(text \u003d\u003e {throw new Error(text)});\\n        }\\n        return response.json();\\n    })\\n    .then(data \u003d\u003e {\\n        console.log(data.data[0].embedding);\\n        return data.data[0].embedding.toString();\\n    });\\n}\\n\\n\\nreturn chatGptRequest()\\n    .then(embeddings \u003d\u003e seoSpider.data(embeddings))\\n    .catch(error \u003d\u003e seoSpider.error(error));\\n\\n",
+      "name": "OpenAI Embeddings",
+      "comments": "",
+      "type": "EXTRACTION",
+      "actionTimeoutSecs": 1,
+      "contentTypes": "text/html"
+    },
+    {
+      "version": 1,
+      "javascript": "const OPENAI_API_KEY \u003d \\\u0027YOUR OPENAI KEY HERE\\\u0027;\\r\\nconst userContent \u003d document.body.innerText;\\r\\n\\r\\nfunction chatGptRequest() {\\r\\n    if (new TextEncoder().encode(userContent).length \u003e 8191) { \\/\\/ Checking byte length approximation for tokens\\r\\n        \\/\\/ Function to break the string into chunks\\r\\n        function chunkString(str, size) {\\r\\n            const numChunks \u003d Math.ceil(str.length \\/ size);\\r\\n            const chunks \u003d new Array(numChunks);\\r\\n\\r\\n            for (let i \u003d 0, o \u003d 0; i \u003c numChunks; ++i, o +\u003d size) {\\r\\n                chunks[i] \u003d str.substring(o, o + size);\\r\\n            }\\r\\n            return chunks;\\r\\n        }\\r\\n\\r\\n        \\/\\/ Divide content into manageable chunks\\r\\n        const chunks \u003d chunkString(userContent, 8191);\\r\\n\\r\\n        \\/\\/ Function to request batch embeddings for all chunks\\r\\n        function chatGptBatchRequest(chunks) {\\r\\n            return fetch(\\\u0027https:\\/\\/api.openai.com\\/v1\\/embeddings\\\u0027, {\\r\\n                method: \\\u0027POST\\\u0027,\\r\\n                headers: {\\r\\n                    \\\u0027Authorization\\\u0027: `Bearer ${OPENAI_API_KEY}`,\\r\\n                    \\\"Content-Type\\\": \\\"application\\/json\\\",\\r\\n                },\\r\\n                body: JSON.stringify({\\r\\n                    model: \\\"text-embedding-3-small\\\",\\r\\n                    input: chunks,\\r\\n                    encoding_format: \\\"float\\\",\\r\\n                })\\r\\n            })\\r\\n            .then(response \u003d\u003e {\\r\\n                if (!response.ok) {\\r\\n                    return response.text().then(text \u003d\u003e { throw new Error(text); });\\r\\n                }\\r\\n                return response.json();\\r\\n            })\\r\\n            .then(data \u003d\u003e {\\r\\n                if (data.data.length \u003e 0) {\\r\\n                    const numEmbeddings \u003d data.data.length;\\r\\n                    const embeddingLength \u003d data.data[0].embedding.length;\\r\\n                    const sumEmbedding \u003d new Array(embeddingLength).fill(0);\\r\\n\\r\\n                    data.data.forEach(embed \u003d\u003e {\\r\\n                        embed.embedding.forEach((value, index) \u003d\u003e {\\r\\n                            sumEmbedding[index] +\u003d value;\\r\\n                        });\\r\\n                    });\\r\\n\\r\\n                    const averageEmbedding \u003d sumEmbedding.map(sum \u003d\u003e sum \\/ numEmbeddings);\\r\\n                    return averageEmbedding.toString();\\r\\n                } else {\\r\\n                    throw new Error(\\\"No embeddings returned from the API.\\\");\\r\\n                }\\r\\n            });\\r\\n        }\\r\\n\\r\\n        \\/\\/ Make a single batch request with all chunks and process the average\\r\\n        return chatGptBatchRequest(chunks);\\r\\n    } else {\\r\\n        \\/\\/ Process single embedding request if content is within the token limit\\r\\n        return fetch(\\\u0027https:\\/\\/api.openai.com\\/v1\\/embeddings\\\u0027, {\\r\\n            method: \\\u0027POST\\\u0027,\\r\\n            headers: {\\r\\n                \\\u0027Authorization\\\u0027: `Bearer ${OPENAI_API_KEY}`,\\r\\n                \\\"Content-Type\\\": \\\"application\\/json\\\",\\r\\n            },\\r\\n            body: JSON.stringify({\\r\\n                model: \\\"text-embedding-3-small\\\",\\r\\n                input: userContent,\\r\\n                encoding_format: \\\"float\\\",\\r\\n            })\\r\\n        })\\r\\n        .then(response \u003d\u003e {\\r\\n            if (!response.ok) {\\r\\n                 return response.text().then(text \u003d\u003e {throw new Error(text)});\\r\\n            }\\r\\n            return response.json();\\r\\n        })\\r\\n        .then(data \u003d\u003e {\\r\\n            console.log(data.data[0].embedding);\\r\\n            return data.data[0].embedding.toString();\\r\\n        });\\r\\n    }\\r\\n}\\r\\n\\r\\n\\/\\/ Execute request and handle results\\r\\nreturn chatGptRequest()\\r\\n    .then(embeddings \u003d\u003e seoSpider.data(embeddings))\\r\\n    .catch(error \u003d\u003e seoSpider.error(error));\\r\\n",
+      "name": "OpenAI Embeddings Long Inputs",
+      "comments": "",
+      "type": "EXTRACTION",
+      "actionTimeoutSecs": 1,
+      "contentTypes": "text/html"
+    },
+    {
+      "version": 1,
+      "javascript": "const userContent \u003d document.body.innerText;\\r\\n\\r\\nfunction vertextAiRequest() {\\r\\n    return fetch(\\\u0027http:\\/\\/127.0.0.1:5000\\/embed\\\u0027, {\\r\\n        method: \\\u0027POST\\\u0027,\\r\\n        headers: {\\r\\n            \\\"Content-Type\\\": \\\"application\\/json\\\",\\r\\n        },\\r\\n        body: JSON.stringify({\\r\\n            task: \\\"RETRIEVAL_DOCUMENT\\\",\\r\\n            text: `${userContent}`\\r\\n            })\\r\\n    })\\r\\n    .then(response \u003d\u003e {\\r\\n        if (!response.ok) {\\r\\n             return response.text().then(text \u003d\u003e {throw new Error(text)});\\r\\n        }\\r\\n        return response.json();\\r\\n    })\\r\\n    .then(data \u003d\u003e {\\r\\n        return data.embedding.toString();\\r\\n    });\\r\\n}\\r\\n\\r\\n\\r\\nreturn vertextAiRequest()\\r\\n    .then(embeddings \u003d\u003e seoSpider.data(embeddings))\\r\\n    .catch(error \u003d\u003e seoSpider.error(error));\\r\\n\\r\\n",
+      "name": "REAL Vertex Local",
+      "comments": "",
+      "type": "EXTRACTION",
+      "actionTimeoutSecs": 1,
+      "contentTypes": "text/html"
+    },
+    {
+      "version": 1,
+      "javascript": "const userContent \u003d document.body.innerText;\\n\\nfunction getEmbeddings(userContent) {\\n    const apiUrl \u003d \\\u0027http:\\/\\/localhost:11434\\/api\\/embeddings\\\u0027;\\n\\n    const postData \u003d {\\n        \\\"model\\\": \\\"avr\\/sfr-embedding-mistral\\\",\\n        \\\"prompt\\\": userContent,\\n    };\\n\\n    const fetchOptions \u003d {\\n        method: \\\u0027POST\\\u0027,\\n        headers: {\\n            \\\u0027Content-Type\\\u0027: \\\u0027application\\/json\\\u0027\\n        },\\n        body: JSON.stringify(postData)\\n    };\\n\\n    return fetch(apiUrl, fetchOptions)\\n        .then(response \u003d\u003e {\\n            if (!response.ok) {\\n                return response.text().then(text \u003d\u003e {throw new Error(text)});\\n            }\\n            return response.json();\\n        })\\n        .then(data \u003d\u003e {\\n            return data.embedding;\\n        });\\n}\\n\\nreturn getEmbeddings(userContent)\\n  .then(embeddings \u003d\u003e seoSpider.data(embeddings))\\n  .catch(error \u003d\u003e seoSpider.error(error));\\n  ",
+      "name": "ollama SFR Embeddings",
+      "comments": "",
+      "type": "EXTRACTION",
+      "actionTimeoutSecs": 1,
+      "contentTypes": "text/html"
+    }
+  ]
+}
